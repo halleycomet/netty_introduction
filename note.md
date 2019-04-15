@@ -135,4 +135,5 @@ public class CustomerHandler extends SimpleChannelInboundHandler<HttpObject> {
     - userEventTriggered 用户时间触发
     - exceptionCaught 异常处理
     - handlerAdded
-    - handlerRemoved         
+    - handlerRemoved
+    -          
