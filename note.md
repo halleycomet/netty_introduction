@@ -136,4 +136,131 @@ public class CustomerHandler extends SimpleChannelInboundHandler<HttpObject> {
     - exceptionCaught 异常处理
     - handlerAdded
     - handlerRemoved
-    -          
+
+### 实时通信
+- 实现方式
+    - Ajax轮训
+        - 浏览器定时询问,不需要刷新浏览器
+    - Long pull
+        - 阻塞模式
+    - websocket
+        - 持久化协议         
+- WSServerInitialzer
+```$xslt
+    
+    pipeline.addLast("HttpServerCodec",new HttpServerCodec())
+
+    //对写大数据流的支持
+    pipeline.addLast(new ChunkedWriteHandler())
+    
+    //对HTTPMessage进行聚合,FullHttpRequest或FullHttpResponse
+    //几乎都会用到次handler
+    pipeline.addLast(new HttpObjectAggregator())
+    
+    //======以上用于支持HTTP协议
+    
+    // websocket服务器处理的协议,用于指定客户端连接的路由
+    // 心跳保持 close ping pong
+    // 以frames进行传输
+    pipeline.addLast(new WebSocketServerProtocolHandler("/ws"))
+    
+    //自动以助手类
+    pipeline.addLast(null)
+``` 
+- ChatHandler <TextWebSocketFrame>
+```$xslt
+
+    // 用于记录和管理所有客户端的channel
+    private static ChannelGroup clients = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE); 
+    
+    //TextWebSocketFrame 处理文本 
+    channelRead0(ctx,msg){
+        //获取客户端消息
+        String content = msg.text();
+        clients.writeAndFlush(new TextWebSocketFrame(content));           
+    }
+    
+    //建连时获取channel
+    public handlerAdded
+        clients.add(ctx.channel());
+        
+    public handlerRemoved
+        //当触发handlerRemoved channelGroup会自动移除channel
+        clients.remove(ctx.channel())
+```
+### Springboot整合
+- users表
+    - 大小头像
+    - qrcode 用户扫描加好友
+    - cid clientId 手机的id
+    
+- friends_request
+    - send_user_id
+    - accept_user_id
+    - request_time
+
+- my_friends
+    - my_user_id
+    - my_friend_user_id
+
+- chat_msg
+    - send_user_id
+    - accept_user_id
+    - msg
+    - sign_flag 未读 已读
+    - create_time
+    
+- mybatis逆向生成 从表自动生成对象
+    - 配置generatorConfig.xml
+    - jdbcConnection
+    - pojo位置
+    - mapper位置
+    - mapper与java映射
+    - table
+    - 运行GeneratorDisplay.java
+                
+- Springboot搭建
+    - @ComponentScan
+    - @MapperScan
+    - WSServer修改
+    ```$xslt
+       @Component
+       public class WSServer             
+       
+       private static class SingletionWSServer {
+            static final WSServer instance = new WSServer();
+       }
+       
+       public static WSServer getInstance() {
+            return SingletionWSServer.instance;
+       }
+       
+       public void start() {
+            this.future = server.bind(8088);
+       }
+    ```   
+    - NettyBooter启动
+    ```$xslt
+        @Component
+        publice class NettyBooter implements ApplicationListener<ContextRefreshedEvnet>
+        
+        @Override
+        public void onApplicaitonEvent(event){
+            WSServer.getInstance().start()
+        }
+
+    ```
+### 文件服务器
+- 第三方 七牛云
+- FastDFS
+    - C语音实现
+    - Tracker Server
+        - 维护Storage Server状态
+        - 返回可用Storage Server给客户端
+        
+    - Storage Server
+        - 文件写入
+        - 返回文件相对路径 
+    
+    - 客户端
+        - 保存文件路径       
